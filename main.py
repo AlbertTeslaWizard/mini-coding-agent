@@ -1,7 +1,7 @@
 import os
 import time
 from pathlib import Path
-from openai import OpenAI, RateLimitError
+from openai import OpenAI
 import uuid
 import json 
 
@@ -26,18 +26,59 @@ TOOLS = [
             "additionalProperties": False
         },
         "strict": True,
-    }
-]
-
-history = [
+    },
     {
-        "role": "user",
-        "content": "请读取 README.md 并总结这个项目的主要功能。"
+        "type": "function",
+        "name": "list_dir",
+        "description": "List files and subdirectories in a directory",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Directory path relative to the project root. Use '.' for the root directory."
+                }
+            },
+            "required": ["path"],
+            "additionalProperties": False
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
+        "name": "edit_file",
+        "description": (
+            "Replace an exact, unique string in an existing file. "
+            "Read the file before editing it."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path to the file to edit"
+                },
+                "old_string": {
+                    "type": "string",
+                    "description": "Exact text to replace"
+                },
+                "new_string": {
+                    "type": "string",
+                    "description": "Replacement text"
+                }
+            },
+            "required": [
+                "path",
+                "old_string",
+                "new_string"
+            ],
+            "additionalProperties": False,
+        },
+        "strict": True,
     }
 ]
 
-# 请求模型（对上游 429 过载做指数退避重试）
-def call_model(client, history, session_id=SESSION_ID, max_retries=6):
+def call_model(client, history, session_id=SESSION_ID):
     return client.responses.create(
         model="deepseek-v4.1-flash",
         input=history,
@@ -66,12 +107,102 @@ def read_file(path: str) -> str:
     with target.open("r", encoding="utf-8") as file:
         return file.read(10000)
 
+# 实现目录列举工具
+def list_dir(path: str) -> str:
+    root = Path.cwd().resolve()
+    target = (root / path).resolve()
+
+    if not target.is_relative_to(root):
+        return "Error: Access outside project is denied"
+
+    if not target.is_dir():
+        return "Error: Directory does not exist"
+
+    entries = sorted(
+        target.iterdir(),
+        key=lambda entry: entry.name.lower()
+    )
+
+    if not entries:
+        return "(empty directory)"
+
+    output = []
+    for entry in entries[:100]:
+        if entry.is_dir():
+            output.append(f"[DIR] {entry.name}/")
+        else:
+            output.append(f"[FILE] {entry.name}")
+
+    if len(entries) > 100:
+        output.append("... more entries omitted")
+
+    return "\n".join(output)
+
+def edit_file(path: str, old_string: str, new_string: str) -> str:
+    root = Path.cwd().resolve()
+    target = (root / path).resolve()
+
+    if not target.is_relative_to(root):
+        return "Error: Access outside project is denied"
+
+    if target.suffix.lower() not in {".md", ".txt", ".py"}:
+        return "Error: Unsupported file type"
+
+    if not target.is_file():
+        return "Error: File does not exist"
+
+    if not old_string:
+        return "Error: old_string cannot be empty"
+
+    if old_string == new_string:
+        return "Error: No changes requested"
+
+    if target.stat().st_size > 1_000_000:
+        return "Error: File is too large to edit"
+
+    content = target.read_text(encoding="utf-8")
+
+    count = content.count(old_string)
+    if count == 0:
+        return "Error: old_string not found"
+    if count > 1:
+        return f"Error: old_string occurs {count} times"
+
+    new_content = content.replace(
+        old_string,
+        new_string,
+        1
+    )
+
+    print(f"\nFile: {target.relative_to(root)}")
+    print(f"Old:\n{old_string}")
+    print(f"New:\n{new_string}")
+
+    confirmation = input("\nApply this edit? [y/N]: ")
+
+    if confirmation.strip().lower() != "y":
+        return "Error: Edit rejected by user"
+
+    target.write_text(new_content, encoding="utf-8")
+
+    return f"OK: Updated {target.relative_to(root)}"
+
 # 执行模型请求的工具
 def execute_tool(item) -> str:
     try:
         args = json.loads(item.arguments)
         if item.name == "read_file":
             return read_file(args["path"])
+
+        elif item.name == "list_dir":
+            return list_dir(args["path"])
+
+        elif item.name == "edit_file":
+            return edit_file(
+                args["path"],
+                args["old_string"],
+                args["new_string"]
+            )
 
         return f"Error: Unknown tool {item.name}"
 
@@ -137,6 +268,4 @@ if __name__ == '__main__':
 
     print("\n===== Final Answer =====")
     print(answer)
-
-
     
