@@ -116,6 +116,26 @@ TOOLS = [
             "additionalProperties": False
         },
         "strict": True 
+    },
+    {
+        "type": "function",
+        "name": "search_files",
+        "description": (
+            "Search for keyword in project files. "
+            "Return matching file paths, line numbers, and text."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Keyword to search for in project files"
+                }
+            },
+            "required": ["query"],
+            "additionalProperties": False
+        },
+        "strict": True
     }
 ]
 
@@ -178,6 +198,47 @@ def list_dir(path: str) -> str:
         output.append("... more entries omitted")
 
     return "\n".join(output)
+
+def search_files(query: str) -> str:
+    if not query:
+        return "Error: Empty search query"
+
+    root = Path.cwd().resolve()
+    query = query.lower()
+    matches = []
+
+    for folder, dirs, files in os.walk(root, followlinks=False):
+        dirs[:] = [
+            d for d in dirs
+            if d not in {".git", ".venv", "__pycache__", "node_modules"}
+            and not (Path(folder) / d).is_symlink()
+        ]
+
+        for name in sorted(files):
+            path = Path(folder) / name
+            if path.suffix.lower() not in {".py", ".md", ".txt"} or path.is_symlink():
+                continue
+
+            try:
+                if not path.resolve().is_relative_to(root) or path.stat().st_size > 1024 * 1024:
+                    continue
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeError):
+                continue
+
+            for i, line in enumerate(lines, 1):
+                if query in line.lower():
+                    text = line.strip()
+                    if len(text) > 200:
+                        text = text[:200] + "..."
+
+                    matches.append(f"{path.relative_to(root)}:{i}: {text}")
+
+                    if len(matches) == 20:
+                        return "\n".join(matches) + "\n[Match limit reached]"
+
+    return "\n".join(matches) if matches else "No matches found"
+
 
 def edit_file(path: str, old_string: str, new_string: str) -> str:
     root = Path.cwd().resolve()
@@ -321,6 +382,9 @@ def execute_tool(item) -> str:
             return delete_file(
                 args["path"]
             )
+
+        elif item.name == "search_files":
+            return search_files(args["query"])
 
         return f"Error: Unknown tool {item.name}"
 
