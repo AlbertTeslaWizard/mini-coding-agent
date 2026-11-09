@@ -274,13 +274,11 @@ def execute_tool(item) -> str:
         return f"Error: Tool execution failed: {e}"
 
 # Agent Loop
-def run_agent(client, task: str, max_steps: int = 10) -> str:
-    history = [
-        {
-            "role": "user",
-            "content": task 
-        }
-    ]
+def run_agent(client, task: str, history, max_steps: int = 10) -> str:
+    history.append({
+        "role": "user",
+        "content": task 
+    })
 
     session_id = SESSION_ID
 
@@ -327,9 +325,25 @@ if __name__ == '__main__':
         timeout = 60.0
     )
 
-    task = input("请输入任务: ")
-    answer = run_agent(client, task)
+    history = []
+    print("Mini Coding Agent started!")
+    print("Type 'exit' to quit.")
 
-    print("\n===== Final Answer =====")
-    print(answer)
+    while True:
+        task = input("\nYou > ").strip()
+        
+        if task.strip().lower() in {"exit", "quit"}:
+            print("Goodbye!")
+            break
+
+        if not task:
+            continue 
+
+        answer = run_agent(
+            client = client,
+            task = task,
+            history = history 
+        )
+
+        print(f"\nAgent > {answer}")
     
