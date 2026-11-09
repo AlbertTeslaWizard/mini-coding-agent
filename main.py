@@ -99,6 +99,23 @@ TOOLS = [
             "additionalProperties": False 
         },
         "strict": True
+    },
+    {
+        "type": "function",
+        "name": "delete_file",
+        "description": "Delete an existing file within the project directory",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Relative path to the file to delete"
+                }
+            },
+            "required": ["path"],
+            "additionalProperties": False
+        },
+        "strict": True 
     }
 ]
 
@@ -245,6 +262,38 @@ def write_file(path: str, content: str) -> str:
 
     return f"OK: Created {target.relative_to(root)}"
 
+def delete_file(path: str) -> str:
+    root = Path.cwd().resolve()
+    requested = root / path
+
+    if requested.is_symlink():
+        return "Error: Symbolic links cannot be deleted"
+
+    target = requested.resolve()
+
+    if not target.is_relative_to(root):
+        return "Error: Access outside project is denied"
+
+    if target.suffix.lower() not in {".py", ".md", ".txt"}:
+        return "Error: Unsupported file type"
+
+    if not target.is_file():
+        return "Error: File does not exist or is not a regular file"
+
+    relative_path = target.relative_to(root)
+
+    confirm = input(f"Confirm deletion of {relative_path}? [y/N]: ").strip().lower()
+    if confirm not in {"y", "yes"}:
+        return "Deletion cancelled by user"
+
+    # 删除文件
+    try:
+        target.unlink()
+    except OSError as e:
+        return f"Error: Failed to delete file: {e}"
+
+    return f"Successfully deleted {relative_path}"
+
 # 执行模型请求的工具
 def execute_tool(item) -> str:
     try:
@@ -266,6 +315,11 @@ def execute_tool(item) -> str:
             return write_file(
                 args["path"],
                 args["content"]
+            )
+
+        elif item.name == "delete_file":
+            return delete_file(
+                args["path"]
             )
 
         return f"Error: Unknown tool {item.name}"
@@ -332,7 +386,7 @@ if __name__ == '__main__':
     while True:
         task = input("\nYou > ").strip()
         
-        if task.strip().lower() in {"exit", "quit"}:
+        if task.lower() in {"exit", "quit"}:
             print("Goodbye!")
             break
 
