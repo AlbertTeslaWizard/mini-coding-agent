@@ -1,5 +1,4 @@
 import os
-import time
 from pathlib import Path
 from openai import OpenAI
 import uuid
@@ -75,6 +74,31 @@ TOOLS = [
             "additionalProperties": False,
         },
         "strict": True,
+    },
+    {
+        "type": "function",
+        "name": "write_file",
+        "description": (
+            "Create a new file and write text content to it. "
+            "Do not overwrite existing files. "
+            "Use edit_file to modify existing files."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path of the new file"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Text content to write into new file"
+                }
+            },
+            "required": ["path", "content"],
+            "additionalProperties": False 
+        },
+        "strict": True
     }
 ]
 
@@ -187,6 +211,40 @@ def edit_file(path: str, old_string: str, new_string: str) -> str:
 
     return f"OK: Updated {target.relative_to(root)}"
 
+def write_file(path: str, content: str) -> str:
+    root = Path.cwd().resolve()
+    target = (root / path).resolve()
+
+    if not target.is_relative_to(root):
+        return "Error: Access outside project is denied"
+
+    if target.suffix.lower() not in {".md", ".py", ".txt"}:
+        return "Error: Unsupported file types"
+
+    if target.exists():
+        return "Error: File already exists"
+
+    if not target.parent.is_dir():
+        return "Error: Parent directory does not exist"
+
+    if len(content.encode("utf-8")) > 100_000:
+        return "Error: Content is too large"
+
+    print(f"\nNew file: {target.relative_to(root)}")
+    print(f"Content preview:\n{content[:500]}")
+
+    if len(content) > 500:
+        print("... (preview truncated)")
+
+    confirmation = input("\nCreate this file? [y/N]: ")
+    if confirmation.strip().lower() != "y":
+        return "Error: File creation rejected by user"
+
+    with target.open("x", encoding="utf-8") as file:
+        file.write(content)
+
+    return f"OK: Created {target.relative_to(root)}"
+
 # 执行模型请求的工具
 def execute_tool(item) -> str:
     try:
@@ -202,6 +260,12 @@ def execute_tool(item) -> str:
                 args["path"],
                 args["old_string"],
                 args["new_string"]
+            )
+
+        elif item.name == "write_file":
+            return write_file(
+                args["path"],
+                args["content"]
             )
 
         return f"Error: Unknown tool {item.name}"
