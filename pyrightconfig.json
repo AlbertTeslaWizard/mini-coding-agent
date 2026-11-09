@@ -1,0 +1,9 @@
+{
+  "venvPath": "../../conda-envs",
+  "venv": "mini-agent",
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "include": ["."],
+  "exclude": ["**/__pycache__", ".ruff_cache", ".git"],
+  "extraPaths": ["."]
+}
