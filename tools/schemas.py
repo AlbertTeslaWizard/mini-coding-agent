@@ -87,7 +87,7 @@ TOOLS = [
                 }
             },
             "required": ["path", "content"],
-            "additionalProperties": False 
+            "additionalProperties": False
         },
         "strict": True
     },
@@ -106,7 +106,7 @@ TOOLS = [
             "required": ["path"],
             "additionalProperties": False
         },
-        "strict": True 
+        "strict": True
     },
     {
         "type": "function",
@@ -124,6 +124,21 @@ TOOLS = [
                 }
             },
             "required": ["query"],
+            "additionalProperties": False
+        },
+        "strict": True
+    },
+    {
+        "type": "function",
+        "name": "run_tests",
+        "description": (
+            "Run the project's pytest test suite. "
+            "Return test results and exit code."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
             "additionalProperties": False
         },
         "strict": True
