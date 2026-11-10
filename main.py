@@ -4,6 +4,8 @@ from openai import OpenAI
 
 from agent import run_agent
 
+from workflows.repair import repair_workflow
+
 
 def main():
     client = OpenAI(
@@ -25,13 +27,20 @@ def main():
             break
 
         if not task:
-            continue 
+            continue
 
-        answer = run_agent(
-            client = client,
-            task = task,
-            history = history 
-        )
+        if task.startswith("/repair "):
+            repair_task = task.removeprefix("/repair ").strip()
+            answer = repair_workflow(
+                client = client,
+                task = repair_task 
+            ) 
+        else: 
+            answer = run_agent(
+                client = client,
+                task = task,
+                history = history 
+            )
 
         print(f"\nAgent > {answer}")
 

@@ -7,7 +7,15 @@ from tools.schemas import TOOLS
 SESSION_ID = f"ses_{uuid.uuid4().hex}"
 
 # 调用大模型
-def call_model(client, history, session_id=SESSION_ID):
+def call_model(client, history, session_id=SESSION_ID, allowed_tools: set[str] | None = None):
+    if allowed_tools is None:
+        tool_schemas = TOOLS
+    else:
+        tool_schemas = [
+            tool for tool in TOOLS
+            if tool["name"] in allowed_tools
+        ]
+
     return client.responses.create(
         model="deepseek-v4.1-flash",
         input=history,
@@ -20,7 +28,7 @@ def call_model(client, history, session_id=SESSION_ID):
     )
 
 # Agent Loop
-def run_agent(client, task: str, history, max_steps: int = 10) -> str:
+def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: set[str] | None = None) -> str:
     history.append({
         "role": "user",
         "content": task
@@ -32,7 +40,7 @@ def run_agent(client, task: str, history, max_steps: int = 10) -> str:
         print(f"\n===== Agent Step {step + 1} ======")
 
         # 请求模型
-        response = call_model(client, history, session_id)
+        response = call_model(client, history, session_id, allowed_tools)
 
         # 保存模型输出
         history.extend(response.output)
@@ -51,7 +59,14 @@ def run_agent(client, task: str, history, max_steps: int = 10) -> str:
             print(f"调用工具: {item.name}")
             print(f"工具参数: {item.arguments}")
 
-            result = execute_tool(item)
+            if (
+                allowed_tools is not None
+                and item.name not in allowed_tools
+            ):
+                result = f"Error: Tool {item.name} is not allowed"
+            else:
+                result = execute_tool(item)
+            
             print(f"工具结果: {result[:200]}")
 
             # 将工具执行结果返回给模型
