@@ -78,7 +78,7 @@ def repair_workflow(client, task: str, max_attempts: int = 3) -> str:
 
         if exit_code == 0:
             return (
-                f"Repair succeded after {attempt} attempt(s).\n\n"
+                f"Repair succeeded after {attempt} attempt(s).\n\n"
                 f"Agent summary:\n{agent_answer}\n\n"
                 f"Test result:\n{test_result}"
             )

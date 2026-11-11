@@ -19,7 +19,7 @@ def call_model(client, history, session_id=SESSION_ID, allowed_tools: set[str] |
     return client.responses.create(
         model="deepseek-v4.1-flash",
         input=history,
-        tools=TOOLS,
+        tools=tool_schemas,
         tool_choice="auto",
         extra_headers={
             "User-Agent": "mini-coding-agent/0.1",
