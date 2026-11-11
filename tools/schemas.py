@@ -142,5 +142,30 @@ TOOLS = [
             "additionalProperties": False
         },
         "strict": True
+    },
+    {
+        "type": "function",
+        "name": "run_shell",
+        "description": (
+            "Execute a limit set of read-only commands "
+            "in the project directory. "
+            "Allowed commands: pwd, ls, ls -la, "
+            "git status --short."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": (
+                        "Command to execute, such as "
+                        "'ls -la' or 'git status --short'"
+                    )
+                }
+            },
+            "required": ["command"],
+            "additionalProperties": False
+        },
+        "strict": True 
     }
 ]

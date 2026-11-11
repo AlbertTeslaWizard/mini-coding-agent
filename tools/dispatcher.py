@@ -10,6 +10,7 @@ from tools.file_ops import (
     write_file,
 )
 from tools.pytest_ops import run_tests
+from tools.shell_ops import run_shell
 
 
 # 执行模型请求的工具
@@ -42,8 +43,12 @@ def execute_tool(item: Any) -> str:
 
         elif item.name == "search_files":
             return search_files(args["query"])
+        
         elif item.name == "run_tests":
             return run_tests()
+
+        elif item.name == "run_shell":
+            return run_shell(args["command"])
 
         return f"Error: Unknown tool {item.name}"
 
