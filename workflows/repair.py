@@ -65,7 +65,8 @@ def repair_workflow(client, task: str, max_attempts: int = 3) -> str:
             task = instruction,
             history = history,
             max_steps = 8,
-            allowed_tools = REPAIR_TOOLS
+            allowed_tools = REPAIR_TOOLS,
+            blocked_edit_dirs=("tests",),
         )
 
         if agent_answer == "Error: Maximum agent steps exceeded":

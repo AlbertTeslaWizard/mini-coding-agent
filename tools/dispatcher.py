@@ -14,7 +14,7 @@ from tools.shell_ops import run_shell
 
 
 # 执行模型请求的工具
-def execute_tool(item: Any) -> str:
+def execute_tool(item: Any, *, blocked_edit_dirs: tuple[str, ...] = (),) -> str:
     try:
         args = json.loads(item.arguments)
         if item.name == "read_file":
@@ -27,7 +27,8 @@ def execute_tool(item: Any) -> str:
             return edit_file(
                 args["path"],
                 args["old_string"],
-                args["new_string"]
+                args["new_string"],
+                blocked_edit_dirs=blocked_edit_dirs,
             )
 
         elif item.name == "write_file":

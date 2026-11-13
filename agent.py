@@ -28,7 +28,7 @@ def call_model(client, history, session_id=SESSION_ID, allowed_tools: set[str] |
     )
 
 # Agent Loop
-def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: set[str] | None = None) -> str:
+def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: set[str] | None = None, blocked_edit_dirs: tuple[str, ...] = ()) -> str:
     history.append({
         "role": "user",
         "content": task
@@ -65,7 +65,7 @@ def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: se
             ):
                 result = f"Error: Tool {item.name} is not allowed"
             else:
-                result = execute_tool(item)
+                result = execute_tool(item, blocked_edit_dirs=blocked_edit_dirs)
             
             print(f"工具结果: {result[:200]}")
 

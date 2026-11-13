@@ -91,12 +91,21 @@ def search_files(query: str) -> str:
     return "\n".join(matches) if matches else "No matches found"
 
 
-def edit_file(path: str, old_string: str, new_string: str) -> str:
+def edit_file(path: str, old_string: str, new_string: str, *, blocked_edit_dirs: tuple[str, ...] = ()) -> str:
     root = Path.cwd().resolve()
     target = (root / path).resolve()
 
     if not target.is_relative_to(root):
         return "Error: Access outside project is denied"
+
+    for directory in blocked_edit_dirs:
+        blocked_dir = (root / directory).resolve()
+
+        if target.is_relative_to(blocked_dir):
+            return (
+                "Error: Editing files in this directory is not allowed: "
+                f"{target.relative_to(root)}"
+            )
 
     if target.suffix.lower() not in {".md", ".txt", ".py"}:
         return "Error: Unsupported file type"
