@@ -7,6 +7,15 @@ from agent import run_agent
 from workflows.plan import plan_workflow
 from workflows.repair import repair_workflow
 
+HELP_TEXT = """Available commands
+
+  /help            Show this help.
+  /plan <task>     Inspect the project and propose a plan without editing files.
+  /repair <task>   Run tests and try to fix failures without editing tests/.
+  exit, quit       Exit the program.
+
+Enter a task in plain text to use the coding agent.
+"""
 
 def main():
     client = OpenAI(
@@ -18,7 +27,7 @@ def main():
 
     history = []
     print("Mini Coding Agent started!")
-    print("Type 'exit' to quit.")
+    print("Type '/help' for commands or 'exit' to quit.")
 
     while True:
         task = input("\nYou > ").strip()
@@ -43,6 +52,7 @@ def main():
                 client = client,
                 task = command_task 
             )
+
         elif command == "/plan":
             if not command_task:
                 print("Usage: /plan <task>")
@@ -52,6 +62,11 @@ def main():
                 client = client,
                 task = command_task
             )
+
+        elif command == "/help":
+            print(HELP_TEXT)
+            continue
+
         else: 
             answer = run_agent(
                 client = client,
