@@ -1,4 +1,5 @@
 import os
+import readline  # noqa: F401  启用行编辑：退格按整字符删除，顺带获得历史记录与方向键
 
 from openai import OpenAI
 
@@ -30,8 +31,15 @@ def main():
     print("Type '/help' for commands or 'exit' to quit.")
 
     while True:
-        task = input("\nYou > ").strip()
-        
+        try:
+            task = input("\nYou > ").strip()
+        except UnicodeDecodeError:
+            print("输入包含无法识别的字节（中文输入或粘贴被打断），请重新输入。")
+            continue
+        except (EOFError, KeyboardInterrupt):
+            print("\nGoodbye!")
+            break
+
         if task.lower() in {"exit", "quit"}:
             print("Goodbye!")
             break
