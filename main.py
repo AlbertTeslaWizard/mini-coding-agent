@@ -4,6 +4,7 @@ from openai import OpenAI
 
 from agent import run_agent
 
+from workflows.plan import plan_workflow
 from workflows.repair import repair_workflow
 
 
@@ -29,12 +30,28 @@ def main():
         if not task:
             continue
 
-        if task.startswith("/repair "):
-            repair_task = task.removeprefix("/repair ").strip()
+        parts = task.split(maxsplit = 1)
+        command = parts[0]
+        command_task = parts[1] if len(parts) == 2 else ""
+
+        if command == "/repair":
+            if not command_task:
+                print("Usage: /repair <task>")
+                continue
+            
             answer = repair_workflow(
                 client = client,
-                task = repair_task 
-            ) 
+                task = command_task 
+            )
+        elif command == "/plan":
+            if not command_task:
+                print("Usage: /plan <task>")
+                continue
+
+            answer = plan_workflow(
+                client = client,
+                task = command_task
+            )
         else: 
             answer = run_agent(
                 client = client,
