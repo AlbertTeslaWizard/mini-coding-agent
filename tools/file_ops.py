@@ -1,4 +1,5 @@
 import os
+from difflib import unified_diff
 from pathlib import Path
 
 
@@ -136,9 +137,20 @@ def edit_file(path: str, old_string: str, new_string: str, *, blocked_edit_dirs:
         1
     )
 
-    print(f"\nFile: {target.relative_to(root)}")
-    print(f"Old:\n{old_string}")
-    print(f"New:\n{new_string}")
+    relative_path = target.relative_to(root).as_posix()
+
+    print()
+    for line in unified_diff(
+        content.splitlines(keepends = True),
+        new_content.splitlines(keepends = True),
+        fromfile = f"a/{relative_path}",
+        tofile = f"b/{relative_path}",
+    ):
+        if line.endswith("\n"):
+            print(line, end = "")
+        else:
+            print(line)
+            print(r"\ No newline at end of file")
 
     confirmation = input("\nApply this edit? [y/N]: ")
 
