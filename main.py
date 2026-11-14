@@ -1,12 +1,12 @@
 import os
-import readline  # noqa: F401  启用行编辑：退格按整字符删除，顺带获得历史记录与方向键
+import readline
 
 from openai import OpenAI
-
 from agent import run_agent
-
+from tools.git_ops import get_git_diff
 from workflows.plan import plan_workflow
 from workflows.repair import repair_workflow
+
 
 HELP_TEXT = """Available commands
 
@@ -73,6 +73,13 @@ def main():
 
         elif command == "/help":
             print(HELP_TEXT)
+            continue
+
+        elif command == "/diff":
+            if command_task:
+                print("Usage: /diff")
+            else:
+                print(get_git_diff())
             continue
 
         else: 
