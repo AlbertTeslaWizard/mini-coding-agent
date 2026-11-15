@@ -6,13 +6,14 @@ from agent import run_agent
 from tools.git_ops import get_git_diff
 from workflows.plan import plan_workflow
 from workflows.repair import repair_workflow
-
+from workflows.apply import PendingPlan, apply_workflow
 
 HELP_TEXT = """Available commands
 
   /help            Show this help.
   /plan <task>     Inspect the project and propose a plan without editing files.
   /repair <task>   Run tests and try to fix failures without editing tests/.
+  /apply           Apply the plan produced by the last /plan command.
   exit, quit       Exit the program.
 
 Enter a task in plain text to use the coding agent.
@@ -29,6 +30,8 @@ def main():
     history = []
     print("Mini Coding Agent started!")
     print("Type '/help' for commands or 'exit' to quit.")
+
+    pending_plan: PendingPlan | None = None
 
     while True:
         try:
@@ -66,10 +69,25 @@ def main():
                 print("Usage: /plan <task>")
                 continue
 
-            answer = plan_workflow(
-                client = client,
-                task = command_task
-            )
+            pending_plan = None
+            answer = plan_workflow(client = client, task = command_task)
+
+            text = answer.strip()
+            if text and text != "No final response" and not text.startswith("Error:"):
+                pending_plan = PendingPlan(task = command_task, text = text)
+
+        elif command == "/apply":
+            if command_task:
+                print("Usage: /apply")
+                continue
+
+            if pending_plan is None:
+                print("No pending plan. Run /plan <task> first.")
+                continue
+
+            plan = pending_plan
+            pending_plan = None
+            answer = apply_workflow(client = client, plan = plan)
 
         elif command == "/help":
             print(HELP_TEXT)
