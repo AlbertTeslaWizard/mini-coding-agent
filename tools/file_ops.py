@@ -2,6 +2,8 @@ import os
 from difflib import unified_diff
 from pathlib import Path
 
+EDIT_REJECTED = "Error: Edit rejected by user"
+
 
 # 实现文件读取工具
 def read_file(path: str) -> str:
@@ -155,7 +157,7 @@ def edit_file(path: str, old_string: str, new_string: str, *, blocked_edit_dirs:
     confirmation = input("\nApply this edit? [y/N]: ")
 
     if confirmation.strip().lower() != "y":
-        return "Error: Edit rejected by user"
+        return EDIT_REJECTED
 
     target.write_text(new_content, encoding="utf-8")
 

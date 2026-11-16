@@ -30,5 +30,6 @@ def apply_workflow(client, plan: PendingPlan) -> str:
         task = instruction,
         history = [],
         max_steps = 8,
-        allowed_tools = APPLY_TOOLS
+        allowed_tools = APPLY_TOOLS,
+        stop_on_edit_rejection = True
     )
