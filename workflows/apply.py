@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from agent import run_agent
 
-APPLY_TOOLS = {"list_dir", "search_files", "read_file", "edit_file"}
+APPLY_TOOLS = {"list_dir", "search_files", "read_file", "edit_file", "write_file"}
 
 @dataclass(frozen = True)
 class PendingPlan:
@@ -20,8 +20,10 @@ def apply_workflow(client, plan: PendingPlan) -> str:
     {plan.text}
 
     Read the relevant files again before editing.
-    Use edit_file for changes, and stay within the plan.
-    If the user rejects an edit, stop and report what was already changed.
+    Use write_file to create a new file and edit_file to modify an existing file.
+    Stay within the plan and do not delete files.
+    If an edit depends on a new file, wait for creation to succeed first.
+    If the user rejects a file change, stop.
     If the plan no longer fits the files, stop and explain why.
     """
 
@@ -31,5 +33,5 @@ def apply_workflow(client, plan: PendingPlan) -> str:
         history = [],
         max_steps = 8,
         allowed_tools = APPLY_TOOLS,
-        stop_on_edit_rejection = True
+        stop_on_file_change_rejection = True
     )

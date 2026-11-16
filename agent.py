@@ -2,10 +2,15 @@ import uuid
 
 from tools.dispatcher import execute_tool
 from tools.schemas import TOOLS
-from tools.file_ops import EDIT_REJECTED
+from tools.file_ops import CREATE_REJECTED, EDIT_REJECTED
 
 # Session ID
 SESSION_ID = f"ses_{uuid.uuid4().hex}"
+
+FILE_CHANGE_REJECTIONS = {
+    ("edit_file", EDIT_REJECTED),
+    ("write_file", CREATE_REJECTED)
+}
 
 # 调用大模型
 def call_model(client, history, session_id=SESSION_ID, allowed_tools: set[str] | None = None):
@@ -29,7 +34,7 @@ def call_model(client, history, session_id=SESSION_ID, allowed_tools: set[str] |
     )
 
 # Agent Loop
-def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: set[str] | None = None, blocked_edit_dirs: tuple[str, ...] = (), *, stop_on_edit_rejection: bool = False,) -> str:
+def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: set[str] | None = None, blocked_edit_dirs: tuple[str, ...] = (), *, stop_on_file_change_rejection: bool = False,) -> str:
     history.append({
         "role": "user",
         "content": task
@@ -77,10 +82,11 @@ def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: se
                 "output": result
             })
 
-            if(stop_on_edit_rejection and item.name == "edit_file" and result == EDIT_REJECTED):
+            if(stop_on_file_change_rejection and (item.name, result) in FILE_CHANGE_REJECTIONS):
+                reason = result.removeprefix("Error: ")
                 return (
-                    "Apply stopped: Edit rejected by user."
-                    "Earlier approved edits, if any, were not reverted."
+                    f"Apply stopped: {reason}. "
+                    "Any edits you already approved are kept."
                 )
 
     return "Error: Maximum agent steps exceeded"

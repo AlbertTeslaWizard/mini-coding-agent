@@ -3,6 +3,7 @@ from difflib import unified_diff
 from pathlib import Path
 
 EDIT_REJECTED = "Error: Edit rejected by user"
+CREATE_REJECTED = "Error: File creation rejected by user"
 
 
 # 实现文件读取工具
@@ -190,7 +191,7 @@ def write_file(path: str, content: str) -> str:
 
     confirmation = input("\nCreate this file? [y/N]: ")
     if confirmation.strip().lower() != "y":
-        return "Error: File creation rejected by user"
+        return CREATE_REJECTED
 
     with target.open("x", encoding="utf-8") as file:
         file.write(content)
