@@ -5,6 +5,7 @@ from tools.change_log import FileChange
 
 EDIT_REJECTED = "Error: Edit rejected by user"
 CREATE_REJECTED = "Error: File creation rejected by user"
+DELETE_REJECTED = "Error: Deletion rejected by user"
 
 
 # 实现文件读取工具
@@ -233,7 +234,7 @@ def delete_file(path: str) -> str:
 
     confirm = input(f"Confirm deletion of {relative_path}? [y/N]: ").strip().lower()
     if confirm not in {"y", "yes"}:
-        return "Deletion cancelled by user"
+        return DELETE_REJECTED
 
     # 删除文件
     try:

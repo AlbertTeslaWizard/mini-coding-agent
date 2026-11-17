@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from agent import run_agent
 from tools.change_log import FileChange
 
-APPLY_TOOLS = {"list_dir", "search_files", "read_file", "edit_file", "write_file"}
+APPLY_TOOLS = {"list_dir", "search_files", "read_file", "edit_file", "write_file", "delete_file"}
 
 @dataclass(frozen = True)
 class PendingPlan:
@@ -19,10 +19,11 @@ def apply_workflow(client, plan: PendingPlan, *, changes: list[FileChange] | Non
     Reviewed plan:
     {plan.text}
 
-    Read the relevant files again before editing.
+    Read the relevant files again before changing them.
     Use write_file to create a new file and edit_file to modify an existing file.
-    Stay within the plan and do not delete files.
-    If an edit depends on a new file, wait for creation to succeed first.
+    Stay within the reviewed plan.
+    Use delete_file only for a file explicitly named for deletion in the plan.
+    If a later step depends on creation or deletion, wait for the tool to report success first.
     If the user rejects a file change, stop.
     If the plan no longer fits the files, stop and explain why.
     """

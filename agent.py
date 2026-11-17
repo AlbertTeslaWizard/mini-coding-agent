@@ -2,7 +2,7 @@ import uuid
 
 from tools.dispatcher import execute_tool
 from tools.schemas import TOOLS
-from tools.file_ops import CREATE_REJECTED, EDIT_REJECTED
+from tools.file_ops import CREATE_REJECTED, EDIT_REJECTED, DELETE_REJECTED
 from tools.change_log import FileChange
 
 # Session ID
@@ -10,7 +10,8 @@ SESSION_ID = f"ses_{uuid.uuid4().hex}"
 
 FILE_CHANGE_REJECTIONS = {
     ("edit_file", EDIT_REJECTED),
-    ("write_file", CREATE_REJECTED)
+    ("write_file", CREATE_REJECTED),
+    ("delete_file", DELETE_REJECTED),
 }
 
 # 调用大模型

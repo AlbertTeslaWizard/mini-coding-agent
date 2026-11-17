@@ -114,7 +114,6 @@ def test_apply_create_file_then_edit(tmp_path, monkeypatch, answers, created):
         model_calls.append(1)
         offered_tools = {tool["name"] for tool in kwargs["tools"]}
         assert "write_file" in offered_tools
-        assert "delete_file" not in offered_tools
 
         if len(model_calls) == 1:
             return NS(output=calls, output_text="")
