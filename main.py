@@ -4,6 +4,7 @@ import readline
 from openai import OpenAI
 from agent import run_agent
 from tools.git_ops import get_git_diff
+from tools.change_log import FileChange, undo_last_change
 from workflows.plan import plan_workflow
 from workflows.repair import repair_workflow
 from workflows.apply import PendingPlan, apply_workflow
@@ -14,6 +15,7 @@ HELP_TEXT = """Available commands
   /plan <task>     Inspect the project and propose a plan without editing files.
   /repair <task>   Run tests and try to fix failures without editing tests/.
   /apply           Apply the plan produced by the last /plan command.
+  /undo            Undo the last approved file change made by /apply.
   exit, quit       Exit the program.
 
 Enter a task in plain text to use the coding agent.
@@ -32,6 +34,7 @@ def main():
     print("Type '/help' for commands or 'exit' to quit.")
 
     pending_plan: PendingPlan | None = None
+    apply_changes: list[FileChange] = []
 
     while True:
         try:
@@ -87,7 +90,14 @@ def main():
 
             plan = pending_plan
             pending_plan = None
-            answer = apply_workflow(client = client, plan = plan)
+            answer = apply_workflow(client = client, plan = plan, changes = apply_changes)
+
+        elif command == "/undo":
+            if command_task:
+                print("Usage: /undo")
+            else:
+                print(undo_last_change(apply_changes))
+            continue
 
         elif command == "/help":
             print(HELP_TEXT)

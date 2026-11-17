@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-
 from agent import run_agent
+from tools.change_log import FileChange
 
 APPLY_TOOLS = {"list_dir", "search_files", "read_file", "edit_file", "write_file"}
 
@@ -9,7 +9,7 @@ class PendingPlan:
     task: str
     text: str
 
-def apply_workflow(client, plan: PendingPlan) -> str:
+def apply_workflow(client, plan: PendingPlan, *, changes: list[FileChange] | None = None) -> str:
     instruction = f"""
     Execute the reviewed plan below.
 
@@ -33,5 +33,6 @@ def apply_workflow(client, plan: PendingPlan) -> str:
         history = [],
         max_steps = 8,
         allowed_tools = APPLY_TOOLS,
-        stop_on_file_change_rejection = True
+        stop_on_file_change_rejection = True,
+        changes = changes
     )

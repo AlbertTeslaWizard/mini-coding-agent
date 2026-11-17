@@ -11,10 +11,10 @@ from tools.file_ops import (
 )
 from tools.pytest_ops import run_tests
 from tools.shell_ops import run_shell
-
+from tools.change_log import FileChange 
 
 # 执行模型请求的工具
-def execute_tool(item: Any, *, blocked_edit_dirs: tuple[str, ...] = (),) -> str:
+def execute_tool(item: Any, *, blocked_edit_dirs: tuple[str, ...] = (), changes: list[FileChange] | None = None) -> str:
     try:
         args = json.loads(item.arguments)
         if item.name == "read_file":
@@ -28,13 +28,15 @@ def execute_tool(item: Any, *, blocked_edit_dirs: tuple[str, ...] = (),) -> str:
                 args["path"],
                 args["old_string"],
                 args["new_string"],
-                blocked_edit_dirs=blocked_edit_dirs,
+                blocked_edit_dirs = blocked_edit_dirs,
+                changes = changes 
             )
 
         elif item.name == "write_file":
             return write_file(
                 args["path"],
-                args["content"]
+                args["content"],
+                changes = changes
             )
 
         elif item.name == "delete_file":

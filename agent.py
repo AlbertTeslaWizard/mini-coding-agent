@@ -3,6 +3,7 @@ import uuid
 from tools.dispatcher import execute_tool
 from tools.schemas import TOOLS
 from tools.file_ops import CREATE_REJECTED, EDIT_REJECTED
+from tools.change_log import FileChange
 
 # Session ID
 SESSION_ID = f"ses_{uuid.uuid4().hex}"
@@ -34,7 +35,7 @@ def call_model(client, history, session_id=SESSION_ID, allowed_tools: set[str] |
     )
 
 # Agent Loop
-def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: set[str] | None = None, blocked_edit_dirs: tuple[str, ...] = (), *, stop_on_file_change_rejection: bool = False,) -> str:
+def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: set[str] | None = None, blocked_edit_dirs: tuple[str, ...] = (), *, changes: list[FileChange] | None = None, stop_on_file_change_rejection: bool = False) -> str:
     history.append({
         "role": "user",
         "content": task
@@ -71,7 +72,7 @@ def run_agent(client, task: str, history, max_steps: int = 10, allowed_tools: se
             ):
                 result = f"Error: Tool {item.name} is not allowed"
             else:
-                result = execute_tool(item, blocked_edit_dirs=blocked_edit_dirs)
+                result = execute_tool(item, blocked_edit_dirs=blocked_edit_dirs, changes = changes)
             
             print(f"工具结果: {result[:200]}")
 

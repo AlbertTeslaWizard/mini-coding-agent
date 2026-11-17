@@ -3,6 +3,7 @@ from types import SimpleNamespace as NS
 
 import pytest
 
+from tools.change_log import undo_last_change
 from workflows.apply import PendingPlan, apply_workflow
 
 
@@ -67,6 +68,7 @@ def test_apply_stops_after_rejected_edit(
         f"value = {value}\n" for value in expected_values
     ]
 
+
 @pytest.mark.parametrize(
     ("answers", "created"),
     [
@@ -76,8 +78,10 @@ def test_apply_stops_after_rejected_edit(
 )
 def test_apply_create_file_then_edit(tmp_path, monkeypatch, answers, created):
     monkeypatch.chdir(tmp_path)
+
     main_file = tmp_path / "main.py"
-    main_file.write_text("print(1)\n", encoding="utf-8")
+    original = b"print(1)\r\n"
+    main_file.write_bytes(original)
     utils_file = tmp_path / "utils.py"
 
     def make_call(name, **arguments):
@@ -98,13 +102,13 @@ def test_apply_create_file_then_edit(tmp_path, monkeypatch, answers, created):
         ),
     ]
 
-    remaining = iter(answers)
+    remaining_answers = iter(answers)
     prompts = []
     model_calls = []
 
     def fake_input(prompt):
         prompts.append(prompt)
-        return next(remaining, "n")
+        return next(remaining_answers, "n")
 
     def fake_create(**kwargs):
         model_calls.append(1)
@@ -119,12 +123,14 @@ def test_apply_create_file_then_edit(tmp_path, monkeypatch, answers, created):
     monkeypatch.setattr("builtins.input", fake_input)
     client = NS(responses=NS(create=fake_create))
 
+    changes = []
     result = apply_workflow(
         client,
         PendingPlan(
             task="Move the value to utils.py",
             text="Create utils.py, then import VALUE in main.py",
         ),
+        changes=changes,
     )
 
     assert len(prompts) == len(answers)
@@ -135,8 +141,21 @@ def test_apply_create_file_then_edit(tmp_path, monkeypatch, answers, created):
             "from utils import VALUE\n\nprint(VALUE)\n"
         )
         assert result == "Done"
-    else:
+        assert len(changes) == 2
+
+        # 第一次撤销只恢复 main.py，utils.py 仍然存在。
+        undo_last_change(changes)
+        assert main_file.read_bytes() == original
+        assert utils_file.is_file()
+
+        # 第二次撤销才移除 /apply 创建的 utils.py。
+        undo_last_change(changes)
         assert not utils_file.exists()
-        assert main_file.read_text(encoding="utf-8") == "print(1)\n"
+        assert changes == []
+    else:
+        # 拒绝创建后，不执行后续编辑，也不留下撤销记录。
+        assert changes == []
+        assert not utils_file.exists()
+        assert main_file.read_bytes() == original
         assert "File creation rejected by user" in result
         assert len(model_calls) == 1

@@ -1,6 +1,7 @@
 import os
 from difflib import unified_diff
 from pathlib import Path
+from tools.change_log import FileChange
 
 EDIT_REJECTED = "Error: Edit rejected by user"
 CREATE_REJECTED = "Error: File creation rejected by user"
@@ -95,7 +96,7 @@ def search_files(query: str) -> str:
     return "\n".join(matches) if matches else "No matches found"
 
 
-def edit_file(path: str, old_string: str, new_string: str, *, blocked_edit_dirs: tuple[str, ...] = ()) -> str:
+def edit_file(path: str, old_string: str, new_string: str, *, blocked_edit_dirs: tuple[str, ...] = (), changes: list[FileChange] | None = None,) -> str:
     root = Path.cwd().resolve()
     target = (root / path).resolve()
 
@@ -126,7 +127,8 @@ def edit_file(path: str, old_string: str, new_string: str, *, blocked_edit_dirs:
     if target.stat().st_size > 1_000_000:
         return "Error: File is too large to edit"
 
-    content = target.read_text(encoding="utf-8")
+    before = target.read_bytes()
+    content = before.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
 
     count = content.count(old_string)
     if count == 0:
@@ -160,11 +162,18 @@ def edit_file(path: str, old_string: str, new_string: str, *, blocked_edit_dirs:
     if confirmation.strip().lower() != "y":
         return EDIT_REJECTED
 
-    target.write_text(new_content, encoding="utf-8")
+    if target.read_bytes() != before:
+        return "Error: File changed while the edit was awaiting confirmation"
 
+    after = new_content.replace("\n", os.linesep).encode("utf-8")
+    target.write_bytes(after)
+
+    if changes is not None:
+        changes.append(FileChange(target, before, after))
+    
     return f"OK: Updated {target.relative_to(root)}"
 
-def write_file(path: str, content: str) -> str:
+def write_file(path: str, content: str, *, changes: list[FileChange] | None = None,) -> str:
     root = Path.cwd().resolve()
     target = (root / path).resolve()
 
@@ -193,8 +202,12 @@ def write_file(path: str, content: str) -> str:
     if confirmation.strip().lower() != "y":
         return CREATE_REJECTED
 
-    with target.open("x", encoding="utf-8") as file:
-        file.write(content)
+    after = content.replace("\n", os.linesep).encode("utf-8")
+    with target.open("xb") as file:
+        file.write(after)
+
+    if changes is not None:
+        changes.append(FileChange(target, None, after))
 
     return f"OK: Created {target.relative_to(root)}"
 
