@@ -212,7 +212,7 @@ def write_file(path: str, content: str, *, changes: list[FileChange] | None = No
 
     return f"OK: Created {target.relative_to(root)}"
 
-def delete_file(path: str) -> str:
+def delete_file(path: str, changes: list[FileChange] | None = None) -> str:
     root = Path.cwd().resolve()
     requested = root / path
 
@@ -232,14 +232,21 @@ def delete_file(path: str) -> str:
 
     relative_path = target.relative_to(root)
 
-    confirm = input(f"Confirm deletion of {relative_path}? [y/N]: ").strip().lower()
-    if confirm not in {"y", "yes"}:
-        return DELETE_REJECTED
-
-    # 删除文件
     try:
+        before = target.read_bytes() if changes is not None else None 
+        
+        confirm = input(f"Confirm deletion of {relative_path}? [y/N]: ").strip().lower()
+        if confirm.strip().lower() not in {"y", "yes"}:
+            return DELETE_REJECTED
+
+        if target.resolve() != target or (before is not None and target.read_bytes() != before):
+            return "Error: File changed while deletion was awaiting confirmation"
+
         target.unlink()
-    except OSError as e:
+    except (OSError, RuntimeError) as e:
         return f"Error: Failed to delete file: {e}"
 
+    if changes is not None and before is not None:
+        changes.append(FileChange(target, before, None))
+    
     return f"Successfully deleted {relative_path}"

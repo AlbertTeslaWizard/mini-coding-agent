@@ -41,7 +41,8 @@ def execute_tool(item: Any, *, blocked_edit_dirs: tuple[str, ...] = (), changes:
 
         elif item.name == "delete_file":
             return delete_file(
-                args["path"]
+                args["path"],
+                changes=changes
             )
 
         elif item.name == "search_files":
