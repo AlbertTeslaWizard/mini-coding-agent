@@ -36,3 +36,39 @@
 | E04 批准补丁 | PASS | 输入 `y` 后只修改了 `calculator.py`，新增 `multiply`。四条乘法断言均通过，全量 `pytest` 返回 `20 passed`。 |
 
 E04 的独立断言覆盖正数相乘、一正一负、两个负数相乘和乘以零。
+
+## 第二组 · 确认新建、确认删除与连续撤销
+
+- 日期：2026-11-19
+- 评测版本：`9625ad8`
+- 配置模型：`deepseek-v4.1-flash`
+- 方式：在独立 Git worktree 中手动运行 CLI，并在第二个终端独立验证文件内容、Git 状态和回归测试。
+- 结果：**3/3 场景通过**。评测结束后工作区干净，全量回归测试为 **`20 passed in 0.05s`**。
+
+### 任务输入
+
+**E05 · 确认新建**
+
+```text
+/plan 在仓库根目录新建 eval_probe.py，内容只有一行 MINI_AGENT_EVAL = 42，行末保留换行。不修改任何其他文件。
+```
+
+执行 `/apply`，确认预览中的路径和内容后输入 `y`，再运行 `/diff`。
+
+**E06 · 确认删除**
+
+```text
+/plan 删除仓库根目录刚才创建的 eval_probe.py。只删除这一个文件，不修改其他文件。
+```
+
+执行 `/apply`，确认删除目标后输入 `y`，再运行 `/diff`。在另一个终端确认文件已不存在。
+
+**E07 · 连续撤销** — 在同一个 Agent 进程中完成创建和删除，然后执行两次 `/undo`，每次撤销后都运行 `/diff` 检查文件状态。
+
+### 结果与证据
+
+| 场景 | 结果 | 实际观察 |
+|---|---|---|
+| E05 确认新建 | PASS | `/plan` 后工作区干净。输入 `y` 后，`write_file` 创建了 `eval_probe.py`，`/diff` 只显示 `?? eval_probe.py`。独立字节断言确认内容恰好为 `MINI_AGENT_EVAL = 42\n`。 |
+| E06 确认删除 | PASS | 输入 `y` 后，`delete_file` 报告删除成功。`/diff` 显示工作区干净，独立文件检查确认 `eval_probe.py` 已不存在。 |
+| E07 连续撤销 | PASS | 补跑时，第一次 `/undo` 撤销删除，`/diff` 重新显示 `?? eval_probe.py`。第二次 `/undo` 撤销创建，文件再次消失，`/diff` 显示 `Working tree is clean.`，`git status --short` 无输出。 |
