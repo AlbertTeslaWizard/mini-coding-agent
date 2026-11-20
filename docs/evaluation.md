@@ -72,3 +72,39 @@ E04 的独立断言覆盖正数相乘、一正一负、两个负数相乘和乘�
 | E05 确认新建 | PASS | `/plan` 后工作区干净。输入 `y` 后，`write_file` 创建了 `eval_probe.py`，`/diff` 只显示 `?? eval_probe.py`。独立字节断言确认内容恰好为 `MINI_AGENT_EVAL = 42\n`。 |
 | E06 确认删除 | PASS | 输入 `y` 后，`delete_file` 报告删除成功。`/diff` 显示工作区干净，独立文件检查确认 `eval_probe.py` 已不存在。 |
 | E07 连续撤销 | PASS | 补跑时，第一次 `/undo` 撤销删除，`/diff` 重新显示 `?? eval_probe.py`。第二次 `/undo` 撤销创建，文件再次消失，`/diff` 显示 `Working tree is clean.`，`git status --short` 无输出。 |
+
+## 第三组 · 测试执行确认与 `/repair` 修复闭环
+
+- 日期：2026-11-20
+- 评测版本：`9625ad8`
+- 配置模型：`deepseek-v4.1-flash`
+- 方式：在独立 Git worktree 中手动运行 CLI。E08 和 E09 验证工作流在调用模型前的停止条件，E10 使用真实模型修复手动注入的故障。
+- 结果：**3/3 场景通过**。E10 第一次修复尝试成功，复测为 **`20 passed in 0.03s`**，最终 `/diff` 显示 `Working tree is clean.`。
+
+### 任务输入
+
+**E08 · 拒绝运行测试 / E09 · 测试已经通过**
+
+两次使用同一条命令。看到 `Run pytest?` 后，E08 输入 `n`，E09 输入 `y`。完成两次操作后运行 `/diff`。
+
+```text
+/repair 检查当前测试，只在有失败时修复对应的实现，不修改测试文件。
+```
+
+**E10 · 修复已知故障**
+
+在 `calculator.py` 中手动将 `add` 的 `return a + b` 改为 `return a - b`，保持测试文件不变。先在 shell 中运行 `python -m pytest -q` 复现故障，再启动 CLI 并输入：
+
+```text
+/repair 根据失败的测试定位问题。只修复 calculator.py 中导致失败的实现，保留其他行为，不修改测试或其他文件。
+```
+
+依次确认初次运行测试、应用单行补丁和运行修复后测试，最后用 `/diff` 检查工作区。
+
+### 结果与证据
+
+| 场景 | 结果 | 实际观察 |
+|---|---|---|
+| E08 拒绝运行测试 | PASS | 输入 `n` 后报告 `Test execution rejected by user`，未进入 `Agent Step`。 |
+| E09 测试已经通过 | PASS | 输入 `y` 后报告 `All existing tests already pass`，未进入 `Agent Step`。E08 和 E09 完成后，`/diff` 显示工作区干净。 |
+| E10 修复已知故障 | PASS | 注入故障后，`test_add_positive_numbers` 失败，`add(2, 3)` 返回 `-1`，全量测试为 `1 failed, 19 passed`。Agent 定位到 `add` 使用了减号。经确认，只把该行改回 `return a + b`，未修改 `subtract` 或测试文件。第一次修复尝试后，工作流复测退出码为 `0`，结果为 `20 passed in 0.03s`。最终 `/diff` 显示 `Working tree is clean.`。 |
